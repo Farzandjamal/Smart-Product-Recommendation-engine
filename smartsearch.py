@@ -37,7 +37,7 @@ def get_image_url(img_data):
 
 def get_smart_recommendations(user_input, max_items=6):
     query = auto_clean(user_input)
-    cat_mask = df['product_category_tree'].str.lower().str.contains(query, na=False)
+    cat_mask = df['brand'].str.lower().str.contains(query, na=False)
     name_mask = df['product_name'].str.lower().str.contains(query, na=False)
     combined = df[cat_mask | name_mask].copy()
 
@@ -86,3 +86,4 @@ if submit_button and user_query:
     else:
 
         st.warning("No products found.")
+
