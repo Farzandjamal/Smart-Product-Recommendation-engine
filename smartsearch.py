@@ -22,20 +22,27 @@ def load_data():
 
 df = load_data()
 
-# --- 2. THE LOGIC (Unchanged) ---
+# --- 2. THE LOGIC ---
 def auto_clean(text):
     if not isinstance(text, str): return ""
     return text.lower().strip()
 
 def get_image_url(img_data):
+    """
+    FIXED: Flipkart stores images like ["url1", "url2"].
+    This code removes the brackets and quotes to get the first clean link.
+    """
     try:
+        if not img_data or img_data == "" or img_data == "[]":
+            return "https://via.placeholder.com/150"
+            
         if isinstance(img_data, str) and img_data.startswith("["):
-            # FIX: Manually cleaning instead of json.loads to handle cloud formatting
+            # Clean the string manually to avoid JSON errors
             url = img_data.replace('[', '').replace(']', '').replace('"', '').replace("'", "").split(',')[0].strip()
-            # FIX: Force HTTPS to prevent Streamlit Cloud from blocking the link
-            return url.replace("http://", "https://")
-        return img_data.replace("http://", "https://")
-    except: return "https://via.placeholder.com/150"
+            return url
+        return img_data
+    except: 
+        return "https://via.placeholder.com/150"
 
 def get_smart_recommendations(user_input, max_items=6):
     query = auto_clean(user_input)
@@ -48,8 +55,7 @@ def get_smart_recommendations(user_input, max_items=6):
         match = process.extractOne(query, all_names, scorer=fuzz.token_set_ratio)
         if match and match[1] > 70:
             combined = df[df['product_name'] == match[0]].copy()
-        else: 
-            return None
+        else: return None
 
     combined['relevance_score'] = 0
     combined.loc[combined['brand'].str.lower().str.contains(query, na=False), 'relevance_score'] += 10
@@ -64,25 +70,22 @@ st.set_page_config(layout="wide")
 st.title("🛒 Smart Recommendation Engine")
 st.caption('By Mr.jamal')
 
-# ADDED: Search Button using a Form
 with st.form("search_form"):
     user_query = st.text_input("What are you looking for?", placeholder="Search here...")
-    submit_button = st.form_submit_button("Search Now",type='primary')
+    submit_button = st.form_submit_button("Search Now", type='primary')
 
 if submit_button and user_query:
     results = get_smart_recommendations(user_query)
     
     if results is not None:
-        # Display results in 4 columns to make images smaller
         cols = st.columns(4) 
         for i, (idx, row) in enumerate(results.iterrows()):
             with cols[i % 4]:
                 url = get_image_url(row['image'])
                 
-                # FIX: Streamlit Cloud prefers direct URL display with forced HTTPS
+                # Directly display the cleaned URL
                 st.image(url, use_container_width=True)
                 
-                # Small text for cleaner look
                 st.caption(f"**{row['product_name'][:30]}...**")
                 st.markdown(f"**₹{row['retail_price']}**")
     else:
