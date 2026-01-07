@@ -28,28 +28,24 @@ def auto_clean(text):
 
 def get_image_url(img_data):
     """
-    ULTIMATE FIX: Downloads the image using a Browser Header
-    to bypass security blocks that prevent direct linking.
+    FIX: Uses a Proxy service (weserv.nl) to fetch images. 
+    This bypasses Flipkart's 'No-Hotlinking' blocks and SSL issues.
     """
     try:
         if not img_data or img_data == "" or img_data == "[]":
             return "https://via.placeholder.com/150"
             
-        # 1. Clean the string to get the URL
+        # 1. Extract the clean URL
         if isinstance(img_data, str) and img_data.startswith("["):
             url = img_data.replace('[', '').replace(']', '').replace('"', '').replace("'", "").split(',')[0].strip()
         else:
             url = str(img_data)
         
-        # 2. Upgrade to HTTPS
-        url = url.replace("http://", "https://")
-
-        # 3. Request the image pretending to be a browser
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-        response = requests.get(url, headers=headers, timeout=5)
+        # 2. Use a Proxy Prefix
+        # This service fetches the image for you and serves it as a fresh link.
+        proxy_url = f"https://images.weserv.nl/?url={url.replace('http://', '').replace('https://', '')}"
         
-        # 4. Return the image object directly
-        return Image.open(BytesIO(response.content))
+        return proxy_url
     except: 
         return "https://via.placeholder.com/150"
 
@@ -90,10 +86,10 @@ if submit_button and user_query:
         cols = st.columns(4) 
         for i, (idx, row) in enumerate(results.iterrows()):
             with cols[i % 4]:
-                # This now returns a PIL Image object, which Streamlit handles better
-                img_to_show = get_image_url(row['image'])
+                # We are back to returning a string URL, but via the proxy
+                img_url = get_image_url(row['image'])
                 
-                st.image(img_to_show, use_container_width=True)
+                st.image(img_url, use_container_width=True)
                 st.caption(f"**{row['product_name'][:30]}...**")
                 st.markdown(f"**₹{row['retail_price']}**")
     else:
