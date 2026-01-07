@@ -22,18 +22,27 @@ def load_data():
 
 df = load_data()
 
-# --- 2. THE LOGIC (Unchanged) ---
+# --- 2. THE LOGIC ---
 def auto_clean(text):
     if not isinstance(text, str): return ""
     return text.lower().strip()
 
 def get_image_url(img_data):
+    """
+    Core Logic Change: Replaced json.loads with manual cleaning.
+    Manual cleaning handles single quotes and forced HTTPS which Streamlit Cloud requires.
+    """
     try:
+        if not img_data or img_data == '[]':
+            return "https://via.placeholder.com/150"
+        
         if isinstance(img_data, str) and img_data.startswith("["):
-            img_list = json.loads(img_data.replace("'", '"'))
-            return img_list[0]
-        return img_data
-    except: return "https://via.placeholder.com/150"
+            # Clean brackets and quotes, take the first URL, force HTTPS
+            url = img_data.replace('[', '').replace(']', '').replace('"', '').replace("'", "").split(',')[0].strip()
+            return url.replace("http://", "https://")
+        return img_data.replace("http://", "https://")
+    except: 
+        return "https://via.placeholder.com/150"
 
 def get_smart_recommendations(user_input, max_items=6):
     query = auto_clean(user_input)
@@ -76,12 +85,11 @@ if submit_button and user_query:
             with cols[i % 4]:
                 url = get_image_url(row['image'])
                 
-                # REDUCED SIZE: use_container_width=True inside a narrow column 
-                # makes the image significantly smaller.
-                st.image(url,width=150)
+                # Core logic change: Directly passing URL with forced HTTPS
+                st.image(url, use_container_width=True)
                 
                 # Small text for cleaner look
                 st.caption(f"**{row['product_name'][:30]}...**")
-                st.markdown(f"**${row['retail_price']}**")
+                st.markdown(f"**₹{row['retail_price']}**")
     else:
         st.warning("No products found.")
