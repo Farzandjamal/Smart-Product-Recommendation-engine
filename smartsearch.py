@@ -10,7 +10,7 @@ from rapidfuzz import process, fuzz
 @st.cache_data
 def load_data():
     # Using your specific local path
-    path = r'flipkart.csv'
+    path = r'flipkart_small.csv'
     df = pd.read_csv(path, encoding='Latin-1')
     df.drop(['crawl_timestamp','product_url','overall_rating','is_FK_Advantage_product'], axis=1, inplace=True, errors='ignore')
     df.drop_duplicates(inplace=True)
@@ -85,3 +85,4 @@ if submit_button and user_query:
                 st.markdown(f"**${row['retail_price']}**")
     else:
         st.warning("No products found.")
+
