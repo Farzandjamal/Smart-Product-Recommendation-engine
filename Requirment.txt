@@ -1,8 +1,0 @@
-rapidfuzz
-streamlit
-pandas
-scikit-learn
-nltk
-requests
-Pillow
-
