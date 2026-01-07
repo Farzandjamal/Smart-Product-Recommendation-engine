@@ -10,7 +10,7 @@ from rapidfuzz import process, fuzz
 @st.cache_data
 def load_data():
     # Using your specific local path
-    path = r'flipkart_small.csv'
+    path = r'flipkart.csv'
     df = pd.read_csv(path, encoding='Latin-1')
     df.drop(['crawl_timestamp','product_url','overall_rating','is_FK_Advantage_product'], axis=1, inplace=True, errors='ignore')
     df.drop_duplicates(inplace=True)
@@ -20,30 +20,20 @@ def load_data():
     df = df.drop_duplicates(subset=['product_name'], keep='first').reset_index(drop=True)
     return df
 
-# FIXED: Changed from 'load_d_' to 'load_data()'
 df = load_data()
 
-# --- 2. THE LOGIC ---
+# --- 2. THE LOGIC (Unchanged) ---
 def auto_clean(text):
     if not isinstance(text, str): return ""
     return text.lower().strip()
 
 def get_image_url(img_data):
-    """
-    FIXED: Flipkart data is a string like '["url"]'. 
-    This cleans it so Streamlit can display the image.
-    """
     try:
-        if not img_data or img_data == "" or img_data == "[]":
-            return "https://via.placeholder.com/150"
-            
         if isinstance(img_data, str) and img_data.startswith("["):
-            # Clean brackets and quotes to get the direct link
-            url = img_data.replace('[', '').replace(']', '').replace('"', '').replace("'", "").split(',')[0].strip()
-            return url
+            img_list = json.loads(img_data.replace("'", '"'))
+            return img_list[0]
         return img_data
-    except: 
-        return "https://via.placeholder.com/150"
+    except: return "https://via.placeholder.com/150"
 
 def get_smart_recommendations(user_input, max_items=6):
     query = auto_clean(user_input)
@@ -71,22 +61,27 @@ st.set_page_config(layout="wide")
 st.title("🛒 Smart Recommendation Engine")
 st.caption('By Mr.jamal')
 
+# ADDED: Search Button using a Form
 with st.form("search_form"):
     user_query = st.text_input("What are you looking for?", placeholder="Search here...")
-    submit_button = st.form_submit_button("Search Now", type='primary')
+    submit_button = st.form_submit_button("Search Now",type='primary')
 
 if submit_button and user_query:
     results = get_smart_recommendations(user_query)
     
     if results is not None:
+        # Display results in 4 columns to make images smaller
         cols = st.columns(4) 
         for i, (idx, row) in enumerate(results.iterrows()):
             with cols[i % 4]:
-                # FIXED: Using the cleaned URL logic
                 url = get_image_url(row['image'])
                 
-                st.image(url, use_container_width=True)
+                # REDUCED SIZE: use_container_width=True inside a narrow column 
+                # makes the image significantly smaller.
+                st.image(url,use_container_width=True)
+                
+                # Small text for cleaner look
                 st.caption(f"**{row['product_name'][:30]}...**")
-                st.markdown(f"**₹{row['retail_price']}**")
+                st.markdown(f"**${row['retail_price']}**")
     else:
         st.warning("No products found.")
