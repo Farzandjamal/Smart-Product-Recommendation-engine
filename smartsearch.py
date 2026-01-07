@@ -28,22 +28,18 @@ def auto_clean(text):
     return text.lower().strip()
 
 def get_image_url(img_data):
-    """
-    Surgical fix for the display issue:
-    1. Replaced json.loads with manual string stripping (safer for Flipkart data).
-    2. Forced HTTPS upgrade to bypass browser security blocks.
-    """
     try:
-        if not img_data or img_data == "[]":
+        if not img_data or img_data == "" or img_data == "[]":
             return "https://via.placeholder.com/150"
             
+        # Standardize the string and handle the bracketed format
         if isinstance(img_data, str) and img_data.startswith("["):
-            # Clean brackets and quotes, grab the first URL
+            # Clean string manually to avoid JSON errors with single quotes
             url = img_data.replace('[', '').replace(']', '').replace('"', '').replace("'", "").split(',')[0].strip()
         else:
             url = str(img_data)
-            
-        # FORCE HTTPS: This is the most common reason images don't show on live sites
+        
+        # CORE FIX: Force HTTPS. Streamlit Cloud blocks 'http' images (Mixed Content Error)
         if url.startswith("http://"):
             url = url.replace("http://", "https://")
             
@@ -90,7 +86,7 @@ if submit_button and user_query:
             with cols[i % 4]:
                 url = get_image_url(row['image'])
                 
-                # FIXED: Changed width='content' (invalid) to use_container_width=True
+                # FIXED: use_container_width is the correct parameter for current Streamlit versions
                 st.image(url, use_container_width=True)
                 
                 st.caption(f"**{row['product_name'][:30]}...**")
