@@ -22,18 +22,34 @@ def load_data():
 
 df = load_data()
 
-# --- 2. THE LOGIC (Unchanged) ---
+# --- 2. THE LOGIC ---
 def auto_clean(text):
     if not isinstance(text, str): return ""
     return text.lower().strip()
 
 def get_image_url(img_data):
+    """
+    Surgical fix for the display issue:
+    1. Replaced json.loads with manual string stripping (safer for Flipkart data).
+    2. Forced HTTPS upgrade to bypass browser security blocks.
+    """
     try:
+        if not img_data or img_data == "[]":
+            return "https://via.placeholder.com/150"
+            
         if isinstance(img_data, str) and img_data.startswith("["):
-            img_list = json.loads(img_data.replace("'", '"'))
-            return img_list[0]
-        return img_data
-    except: return "https://via.placeholder.com/150"
+            # Clean brackets and quotes, grab the first URL
+            url = img_data.replace('[', '').replace(']', '').replace('"', '').replace("'", "").split(',')[0].strip()
+        else:
+            url = str(img_data)
+            
+        # FORCE HTTPS: This is the most common reason images don't show on live sites
+        if url.startswith("http://"):
+            url = url.replace("http://", "https://")
+            
+        return url
+    except: 
+        return "https://via.placeholder.com/150"
 
 def get_smart_recommendations(user_input, max_items=6):
     query = auto_clean(user_input)
@@ -61,29 +77,23 @@ st.set_page_config(layout="wide")
 st.title("🛒 Smart Recommendation Engine")
 st.caption('By Mr.jamal')
 
-# ADDED: Search Button using a Form
 with st.form("search_form"):
     user_query = st.text_input("What are you looking for?", placeholder="Search here...")
-    submit_button = st.form_submit_button("Search Now",type='primary')
+    submit_button = st.form_submit_button("Search Now", type='primary')
 
 if submit_button and user_query:
     results = get_smart_recommendations(user_query)
     
     if results is not None:
-        # Display results in 4 columns to make images smaller
         cols = st.columns(4) 
         for i, (idx, row) in enumerate(results.iterrows()):
             with cols[i % 4]:
                 url = get_image_url(row['image'])
                 
-                # REDUCED SIZE: use_container_width=True inside a narrow column 
-                # makes the image significantly smaller.
-                st.image(url,width='content')
+                # FIXED: Changed width='content' (invalid) to use_container_width=True
+                st.image(url, use_container_width=True)
                 
-                # Small text for cleaner look
                 st.caption(f"**{row['product_name'][:30]}...**")
-                st.markdown(f"**${row['retail_price']}**")
+                st.markdown(f"**₹{row['retail_price']}**")
     else:
         st.warning("No products found.")
-
-
