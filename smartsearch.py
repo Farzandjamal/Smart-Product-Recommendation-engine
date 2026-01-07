@@ -9,7 +9,6 @@ from rapidfuzz import process, fuzz
 # --- 1. DATA LOADING ---
 @st.cache_data
 def load_data():
-    # Using your specific local path
     path = r'flipkart_small.csv'
     df = pd.read_csv(path, encoding='Latin-1')
     df.drop(['crawl_timestamp','product_url','overall_rating','is_FK_Advantage_product'], axis=1, inplace=True, errors='ignore')
@@ -28,22 +27,29 @@ def auto_clean(text):
     return text.lower().strip()
 
 def get_image_url(img_data):
+    """
+    ULTIMATE FIX: Downloads the image using a Browser Header
+    to bypass security blocks that prevent direct linking.
+    """
     try:
         if not img_data or img_data == "" or img_data == "[]":
             return "https://via.placeholder.com/150"
             
-        # Standardize the string and handle the bracketed format
+        # 1. Clean the string to get the URL
         if isinstance(img_data, str) and img_data.startswith("["):
-            # Clean string manually to avoid JSON errors with single quotes
             url = img_data.replace('[', '').replace(']', '').replace('"', '').replace("'", "").split(',')[0].strip()
         else:
             url = str(img_data)
         
-        # CORE FIX: Force HTTPS. Streamlit Cloud blocks 'http' images (Mixed Content Error)
-        if url.startswith("http://"):
-            url = url.replace("http://", "https://")
-            
-        return url
+        # 2. Upgrade to HTTPS
+        url = url.replace("http://", "https://")
+
+        # 3. Request the image pretending to be a browser
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        response = requests.get(url, headers=headers, timeout=5)
+        
+        # 4. Return the image object directly
+        return Image.open(BytesIO(response.content))
     except: 
         return "https://via.placeholder.com/150"
 
@@ -84,11 +90,10 @@ if submit_button and user_query:
         cols = st.columns(4) 
         for i, (idx, row) in enumerate(results.iterrows()):
             with cols[i % 4]:
-                url = get_image_url(row['image'])
+                # This now returns a PIL Image object, which Streamlit handles better
+                img_to_show = get_image_url(row['image'])
                 
-                # FIXED: use_container_width is the correct parameter for current Streamlit versions
-                st.image(url, use_container_width=True)
-                
+                st.image(img_to_show, use_container_width=True)
                 st.caption(f"**{row['product_name'][:30]}...**")
                 st.markdown(f"**₹{row['retail_price']}**")
     else:
