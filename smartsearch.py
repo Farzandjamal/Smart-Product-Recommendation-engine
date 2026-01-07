@@ -78,11 +78,12 @@ if submit_button and user_query:
                 
                 # REDUCED SIZE: use_container_width=True inside a narrow column 
                 # makes the image significantly smaller.
-                st.image(url,use_container_width=True)
+                st.image(url,width='content')
                 
                 # Small text for cleaner look
                 st.caption(f"**{row['product_name'][:30]}...**")
                 st.markdown(f"**${row['retail_price']}**")
     else:
         st.warning("No products found.")
+
 
